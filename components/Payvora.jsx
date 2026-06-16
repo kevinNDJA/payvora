@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Download, Users, FileText, Lock, Sparkles, Printer, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Lock, Sparkles } from "lucide-react";
 import Header from "./Header";
 import AuthModal from "./AuthModal";
 import ListView from "./ListView";
-import Field from "./Field";
 import MyInfoModal from "./MyInfoModal";
 import EditView from "./EditView";
 import PreviewView from "./PreviewView";
 import UpgradePage from "./UpgradePage";
 import formatMoney from "../utils/formatCurrency";
-import { FREE_LIMIT, APP_NAME, STRIPE_ACCOUNT_ID, STRIPE_PAYMENT_LINK, CURRENCIES, TEMPLATES, ACCENT_COLORS } from "../constants";
+import { FREE_LIMIT, APP_NAME, STRIPE_PAYMENT_LINK, CURRENCIES, TEMPLATES, ACCENT_COLORS } from "../constants";
 import useInvoices from "../hooks/useInvoices";
 import useMyInfo from "../hooks/useMyInfo";
 import useAuth from "../hooks/useAuth";
@@ -26,19 +25,18 @@ const emptyInvoice = () => ({
   notes: "",
   createdAt: Date.now(),
 });
-// Shared CURRENCIES, TEMPLATES and accent colors live in `constants/index.js`
 
 export default function Payvora() {
   const { invoices, setInvoices, persistInvoices, loading: invoicesLoading } = useInvoices();
   const { myInfo, setMyInfo, persistInfo, loading: myInfoLoading } = useMyInfo();
-  const [view, setView] = useState("list"); // list | edit | preview | guide
+  const [view, setView] = useState("list");
   const [current, setCurrent] = useState(null);
   const [isPro, setIsPro] = useState(false);
   const [proLoading, setProLoading] = useState(true);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showProNotice, setShowProNotice] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const { user, session } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile(user?.id);
 
   const loading = invoicesLoading || myInfoLoading || proLoading || profileLoading;
@@ -47,37 +45,35 @@ export default function Payvora() {
     (async () => {
       try {
         if (user) {
-          // If we have a profile from Supabase, prefer that flag
           if (profile && typeof profile.is_pro !== "undefined") {
             setIsPro(!!profile.is_pro);
-            // If profile is not pro but local storage indicates pro, migrate it
             try {
               const local = await window.storage.get("isPro");
               const localIsPro = local ? JSON.parse(local.value) : false;
               if (localIsPro && !profile.is_pro) {
-                // upsert profile to mark as pro
                 await updateProfile(user.id, { is_pro: true });
                 setIsPro(true);
               }
-            } catch (e) {
+            } catch {
               // ignore migration errors
             }
-            // trigger migration of invoices/settings from local storage to Supabase
             try {
-              const migrated = await window.storage.get('migrated_v1');
+              const migrated = await window.storage.get("migrated_v1");
               if (!migrated && session) {
-                const { migrateLocalDataToServer } = await import('../lib/hooks/services/migrateData');
-                migrateLocalDataToServer(session).then(() => {
-                  // silent
-                }).catch(() => {});
+                const { migrateLocalDataToServer } = await import("../lib/hooks/services/migrateData");
+                migrateLocalDataToServer(session).catch(() => {});
               }
-            } catch (e) {}
+            } catch {
+              // ignore
+            }
           }
         } else {
           const pro = await window.storage.get("isPro");
           if (pro) setIsPro(JSON.parse(pro.value));
         }
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
       setProLoading(false);
     })();
   }, [user, profile]);
@@ -87,7 +83,9 @@ export default function Payvora() {
     setIsPro(next);
     try {
       await window.storage.set("isPro", JSON.stringify(next));
-    } catch (e) {}
+    } catch {
+      // ignore
+    }
     setShowUpgrade(false);
   };
 
@@ -104,12 +102,9 @@ export default function Payvora() {
 
   const saveInvoice = () => {
     const exists = invoices.find((i) => i.id === current.id);
-    let next;
-    if (exists) {
-      next = invoices.map((i) => (i.id === current.id ? current : i));
-    } else {
-      next = [...invoices, current];
-    }
+    const next = exists
+      ? invoices.map((i) => (i.id === current.id ? current : i))
+      : [...invoices, current];
     persistInvoices(next);
     setView("preview");
     if (!isPro) setShowProNotice(true);
@@ -142,10 +137,6 @@ export default function Payvora() {
     setCurrent((c) => ({ ...c, items: c.items.filter((it) => it.id !== id) }));
   };
 
-  const printInvoice = () => {
-    window.print();
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
@@ -156,23 +147,16 @@ export default function Payvora() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          .print-area { box-shadow: none !important; margin: 0 !important; }
-          body { background: white !important; }
-        }
-      `}</style>
-
-      {/* Header */}
       <Header
         isPro={isPro}
         invoicesCount={invoices.length}
         freeLimit={FREE_LIMIT}
+        user={user}
         onGuide={() => setView("guide")}
         onShowUpgrade={() => setShowUpgrade(true)}
         onOpenUpgradePage={() => setView("upgrade")}
         onAuthOpen={() => setShowAuth(true)}
+        onSignOut={signOut}
       />
 
       <main className="max-w-5xl mx-auto px-5 py-8">
@@ -180,14 +164,8 @@ export default function Payvora() {
           <ListView
             invoices={invoices}
             onNew={startNew}
-            onOpen={(inv) => {
-              setCurrent(inv);
-              setView("preview");
-            }}
-            onEdit={(inv) => {
-              setCurrent(inv);
-              setView("edit");
-            }}
+            onOpen={(inv) => { setCurrent(inv); setView("preview"); }}
+            onEdit={(inv) => { setCurrent(inv); setView("edit"); }}
             onDelete={deleteInvoice}
             myInfo={myInfo}
             onUpdateInfo={persistInfo}
@@ -223,7 +201,7 @@ export default function Payvora() {
             isPro={isPro}
             onBack={() => setView("list")}
             onEdit={() => setView("edit")}
-            onPrint={printInvoice}
+            onPrint={() => window.print()}
             onShowUpgrade={() => setShowUpgrade(true)}
             showProNotice={showProNotice}
             onCloseProNotice={() => setShowProNotice(false)}
@@ -245,15 +223,6 @@ export default function Payvora() {
   );
 }
 
-// ListView component moved to components/ListView.jsx
-
-// MyInfoModal component moved to components/MyInfoModal.jsx
-
-// Field component moved to components/Field.jsx
-
-// EditView component moved to components/EditView.jsx
-// Layouts moved to components/layouts/* and Preview moved to components/PreviewView.jsx
-
 function GuideStep({ number, title, children }) {
   return (
     <div className="flex gap-4">
@@ -274,14 +243,12 @@ function GuideView({ isPro, onBack, onShowUpgrade }) {
       <button onClick={onBack} className="text-sm text-stone-500 hover:text-stone-900 mb-4">
         ← Retour
       </button>
-
       <h1 className="text-2xl font-bold" style={{ fontFamily: "Georgia, serif" }}>
         Guide d'utilisation
       </h1>
       <p className="text-sm text-stone-500 mt-1 mb-8">
         Tout ce qu'il faut savoir pour créer vos premières factures en quelques minutes.
       </p>
-
       <div className="space-y-6 mb-10">
         <GuideStep number="1" title="Renseignez vos informations">
           Cliquez sur "Mes infos" depuis la liste des factures pour ajouter le nom de votre entreprise, votre
@@ -305,7 +272,6 @@ function GuideView({ isPro, onBack, onShowUpgrade }) {
           Vous pouvez les rouvrir, les modifier ou les supprimer à tout moment.
         </GuideStep>
       </div>
-
       <div className="border border-stone-200 rounded-xl p-6 bg-white">
         <h2 className="font-bold mb-3">Limites du plan gratuit</h2>
         <ul className="text-sm text-stone-600 space-y-1.5">
@@ -314,7 +280,6 @@ function GuideView({ isPro, onBack, onShowUpgrade }) {
           <li>• Impression / export PDF disponibles, mais avec la mention "{APP_NAME}" en bas de page</li>
         </ul>
       </div>
-
       <div
         className="mt-4 rounded-xl p-6 text-center"
         style={{ background: isPro ? "#f5f5f4" : "linear-gradient(135deg, #fde68a22, #f5f5f4)" }}
@@ -349,7 +314,7 @@ function GuideView({ isPro, onBack, onShowUpgrade }) {
 function UpgradeModal({ isPro, onToggle, onClose }) {
   const handleSubscribe = () => {
     if (STRIPE_PAYMENT_LINK) {
-      window.open(STRIPE_PAYMENT_LINK, "_blank");
+      window.open(STRIPE_PAYMENT_LINK, "_blank", "noopener,noreferrer");
     } else {
       onToggle();
     }
@@ -391,7 +356,7 @@ function UpgradeModal({ isPro, onToggle, onClose }) {
             </button>
             {!STRIPE_PAYMENT_LINK && (
               <p className="text-[11px] text-stone-400 mt-2">
-                Mode démo : le paiement Stripe n'est pas encore configuré.
+                Mode démo : configurez VITE_STRIPE_PAYMENT_LINK dans .env.local
               </p>
             )}
           </>

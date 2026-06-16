@@ -1,8 +1,7 @@
-import React from "react";
 import { APP_NAME } from "../constants";
 import { openSubscription } from "../utils/stripe";
 
-export default function Header({ isPro, invoicesCount = 0, freeLimit = 3, onGuide, onShowUpgrade, onOpenUpgradePage, onAuthOpen }) {
+export default function Header({ isPro, invoicesCount = 0, freeLimit = 3, onGuide, onShowUpgrade, onOpenUpgradePage, onAuthOpen, user, onSignOut }) {
   return (
     <header className="no-print border-b border-stone-200 bg-white">
       <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -25,18 +24,21 @@ export default function Header({ isPro, invoicesCount = 0, freeLimit = 3, onGuid
           <button onClick={onGuide} className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors">
             Guide
           </button>
-
           <button
             onClick={() => onOpenUpgradePage && onOpenUpgradePage()}
             className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors"
           >
             Premium
           </button>
-
-          <button onClick={() => onAuthOpen && onAuthOpen()} className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors">
-            Se connecter
-          </button>
-
+          {user ? (
+            <button onClick={() => onSignOut && onSignOut()} className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors">
+              {user.email?.split("@")[0]} · Déconnexion
+            </button>
+          ) : (
+            <button onClick={() => onAuthOpen && onAuthOpen()} className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors">
+              Se connecter
+            </button>
+          )}
           {!isPro && (
             <button
               onClick={() => openSubscription()}
@@ -45,7 +47,6 @@ export default function Header({ isPro, invoicesCount = 0, freeLimit = 3, onGuid
               Passer à {APP_NAME} Pro
             </button>
           )}
-
           <button
             onClick={onShowUpgrade}
             className="text-xs font-medium px-3 py-1.5 rounded-full border border-stone-300 hover:border-amber-600 hover:text-amber-700 transition-colors"

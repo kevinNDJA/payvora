@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Field from "./Field";
+import { supabase } from "../lib/supabaseClient";
+import { removeLogo, uploadLogo } from "../lib/services/settingsService";
 
 export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade, CURRENCIES = [], TEMPLATES = [], ACCENT_COLORS = [] }) {
   const [form, setForm] = useState(myInfo);
@@ -11,47 +13,38 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
       alert("Le logo doit faire moins de 1 Mo.");
       return;
     }
-    // Show client-side preview immediately
     const reader = new FileReader();
-    reader.onload = () => setForm({ ...form, logo: reader.result });
+    reader.onload = (ev) => setForm((prev) => ({ ...prev, logo: ev.target.result }));
     reader.readAsDataURL(file);
-
-    // Try uploading & saving to Supabase in background
     handleLogoUploadAndSave(file);
   };
 
   const handleLogoUploadAndSave = async (file) => {
     try {
-      const { supabase } = await import("../lib/supabaseClient");
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (userId) {
-        // call service to upload
-        const { uploadLogo } = await import("../lib/services/settingsService");
         const res = await uploadLogo(userId, file);
         if (res.error) throw res.error;
         const publicUrl = res.data;
-        setForm({ ...form, logo: publicUrl });
-        return;
+        setForm((prev) => ({ ...prev, logo: publicUrl }));
       }
-    } catch (e) {
-      // fallback to client-side preview
+    } catch {
+      // fallback to client-side preview already set
     }
   };
 
   const handleRemoveLogo = async () => {
     try {
-      const { supabase } = await import("../lib/supabaseClient");
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (userId) {
-        const { removeLogo } = await import("../lib/services/settingsService");
         await removeLogo(userId, form.logo);
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
-    setForm({ ...form, logo: "" });
+    setForm((prev) => ({ ...prev, logo: "" }));
   };
 
   return (
@@ -59,15 +52,15 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 className="font-bold text-lg mb-4">Vos informations</h2>
         <div className="space-y-3">
-          <Field label="Nom / Raison sociale" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-          <Field label="Adresse" value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
-          <Field label="SIRET (optionnel)" value={form.siret} onChange={(v) => setForm({ ...form, siret: v })} />
+          <Field label="Nom / Raison sociale" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
+          <Field label="Adresse" value={form.address} onChange={(v) => setForm((p) => ({ ...p, address: v }))} />
+          <Field label="SIRET (optionnel)" value={form.siret} onChange={(v) => setForm((p) => ({ ...p, siret: v }))} />
 
           <label className="block">
             <span className="text-xs font-medium text-stone-500">Devise</span>
             <select
               value={form.currency || "EUR"}
-              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+              onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}
               className="mt-1 w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
             >
               {CURRENCIES.map((c) => (
@@ -109,7 +102,7 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
             <p className="text-xs text-stone-400 mt-1">PNG ou JPG, max 1 Mo.</p>
             {!isPro && (
               <p className="text-xs text-amber-700 mt-1">
-                Le logo s'affichera sur vos factures avec l'abonnement {" "}
+                Le logo s'affichera sur vos factures avec l'abonnement{" "}
                 <button onClick={onUpgrade} className="underline font-medium">
                   Pro
                 </button>
@@ -146,7 +139,7 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
                   <button
                     key={t.id}
                     disabled={locked}
-                    onClick={() => !locked && setForm({ ...form, template: t.id })}
+                    onClick={() => !locked && setForm((p) => ({ ...p, template: t.id }))}
                     className={`relative text-left rounded-lg border p-2.5 transition-colors ${
                       selected ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-200"
                     } ${locked ? "opacity-50 cursor-not-allowed" : "hover:border-stone-400"}`}
@@ -168,7 +161,7 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
             </div>
             {!isPro && (
               <p className="text-xs text-amber-700 mt-1.5">
-                Débloquez 7 nouveaux modèles avec {" "}
+                Débloquez 7 nouveaux modèles avec{" "}
                 <button onClick={onUpgrade} className="underline font-medium">
                   Pro
                 </button>
@@ -184,7 +177,7 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
                 {ACCENT_COLORS.map((c) => (
                   <button
                     key={c}
-                    onClick={() => setForm({ ...form, accentColor: c })}
+                    onClick={() => setForm((p) => ({ ...p, accentColor: c }))}
                     className={`h-7 w-7 rounded-full border-2 transition-transform ${
                       form.accentColor === c ? "border-stone-900 scale-110" : "border-transparent"
                     }`}
@@ -201,10 +194,7 @@ export default function MyInfoModal({ myInfo, isPro, onSave, onClose, onUpgrade,
             Annuler
           </button>
           <button
-            onClick={() => {
-              onSave(form);
-              onClose();
-            }}
+            onClick={() => { onSave(form); onClose(); }}
             className="px-4 py-2 text-sm rounded-lg bg-stone-900 text-white"
           >
             Enregistrer

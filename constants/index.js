@@ -1,13 +1,12 @@
 export const FREE_LIMIT = 3;
 export const APP_NAME = "Payvora";
 
-// Configuration Stripe — remplacez STRIPE_PAYMENT_LINK par votre lien de paiement réel
-export const STRIPE_ACCOUNT_ID = "acct_1T2gGHB871Yhbvnc";
-// Central Stripe constants
-export const STRIPE_SUBSCRIPTION_URL = "https://buy.stripe.com/test_5kQdR8drW9gt4mM5Hv1ck00";
-export const STRIPE_PUBLISHABLE_KEY = "pk_test_51T2gGHB87lYhbvncqUGSMWVCVyRhNcs8fpVnXjFPDWpy3g5CpXt6pnvO8okpARCzBfp2I47IGBokJbuJxIiCRidK00kJAvlzdX";
-// Backwards-compatible alias used by older components
-export const STRIPE_PAYMENT_LINK = STRIPE_SUBSCRIPTION_URL; // ex: "https://buy.stripe.com/xxxxxxxxxxxx"
+// Configure via environment variables — never hardcode real keys here
+// VITE_STRIPE_PUBLISHABLE_KEY and VITE_STRIPE_PAYMENT_LINK in mon-application/.env.local
+export const STRIPE_PUBLISHABLE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STRIPE_PUBLISHABLE_KEY) || "";
+export const STRIPE_SUBSCRIPTION_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STRIPE_PAYMENT_LINK) || "";
+// Backwards-compatible alias
+export const STRIPE_PAYMENT_LINK = STRIPE_SUBSCRIPTION_URL;
 
 export const CURRENCIES = [
   { code: "EUR", label: "Euro (€)", locale: "fr-FR" },

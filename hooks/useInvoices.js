@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
 import * as invoiceService from "../lib/services/invoiceService";
 import useAuth from "./useAuth";
 
@@ -18,7 +17,9 @@ export default function useInvoices() {
           const inv = await window.storage.get("invoices");
           if (inv) setInvoices(JSON.parse(inv.value));
         }
-      } catch (e) {}
+      } catch {
+        // keep local state usable when persistence is unavailable
+      }
       setLoading(false);
     })();
   }, [user]);
@@ -27,12 +28,18 @@ export default function useInvoices() {
     setInvoices(next);
     try {
       if (user) {
-        // naive approach: upsert each invoice (could be batched server-side)
+        // Determine which invoices changed vs the current state
         for (const inv of next) {
-          // ensure user_id
           const payload = { ...inv, user_id: user.id };
-          if (!inv.id || inv.id.startsWith('inv_')) {
-            await invoiceService.createInvoice(payload);
+          // Local IDs start with 'inv_' — these are new invoices
+          if (!inv.id || inv.id.startsWith("inv_")) {
+            const { data } = await invoiceService.createInvoice(payload);
+            // Replace temp id with real DB id in local state
+            if (data?.[0]?.id) {
+              setInvoices((prev) =>
+                prev.map((i) => (i.id === inv.id ? { ...i, id: data[0].id } : i))
+              );
+            }
           } else {
             await invoiceService.updateInvoice(inv.id, payload);
           }
@@ -40,8 +47,8 @@ export default function useInvoices() {
       } else {
         await window.storage.set("invoices", JSON.stringify(next));
       }
-    } catch (e) {
-      // ignore for now
+    } catch {
+      // ignore persistence errors silently
     }
   };
 

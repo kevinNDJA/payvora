@@ -28,9 +28,13 @@ export default function useProfile(userId) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.from('profiles').upsert({ id, ...changes }, { returning: 'representation' });
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({ id, ...changes })
+        .select()
+        .single();
       if (error) throw error;
-      setProfile(data?.[0] ?? data);
+      setProfile(data);
       return data;
     } catch (e) {
       setError(e);
@@ -41,12 +45,8 @@ export default function useProfile(userId) {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (!userId) return;
-      await fetchProfile(userId);
-    })();
-    return () => { mounted = false; };
+    if (!userId) return;
+    fetchProfile(userId);
   }, [userId, fetchProfile]);
 
   return { profile, loading, error, fetchProfile, updateProfile };
