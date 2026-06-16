@@ -1,8 +1,6 @@
-import React from "react";
-import LineItemsTable from "../LineItemsTable";
 import Watermark from "../Watermark";
 
-export default function Minimal({ invoice, myInfo, isPro, accent, total, formatMoney }) {
+export default function Minimal({ invoice, myInfo, isPro, total, formatMoney }) {
   const currency = myInfo.currency || "EUR";
   return (
     <div className="print-area bg-white max-w-2xl mx-auto p-12" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>

@@ -11,10 +11,12 @@ export async function createCheckoutSession({ backendUrl } = {}) {
     // Attach logged-in Supabase user id when available so webhooks can link subscription
     let userId = null;
     try {
-      const { data } = await supabase.auth.getSession?.();
-      const session = data?.session ?? null;
-      userId = session?.user?.id ?? null;
-    } catch (e) {
+      if (typeof supabase.auth.getSession === "function") {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session ?? null;
+        userId = session?.user?.id ?? null;
+      }
+    } catch {
       // ignore
     }
 
@@ -43,7 +45,7 @@ export async function openSubscription({ backendUrl } = {}) {
       window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
-  } catch (e) {
+  } catch {
     // fallback below
   }
   window.open(STRIPE_SUBSCRIPTION_URL, "_blank", "noopener,noreferrer");

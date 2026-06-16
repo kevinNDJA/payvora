@@ -11,8 +11,23 @@ if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Warning: STRIPE_SECRET_KEY is not set. Create a .env file from .env.example');
 }
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY || '');
+// Mitigation for Windows SChannel TLS issues sometimes surfacing as HTTP/2 decrypt/recv errors.
+// We keep Node's http(s) client behavior explicit to reduce HTTP/2 negotiation surprises.
+const https = require('https');
+
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  httpClient: Stripe.createHttpClient({
+    httpsAgent: new https.Agent({
+      keepAlive: true,
+      // Force fallback to HTTP/1.1 by disabling ALPN HTTP/2 tokens where possible
+      // (harmless if ALPN is ignored in your Node version)
+      ALPNProtocols: ['http/1.1'],
+    }),
+  }),
+});
+
 const supabase = require('./supabaseClient');
+
 
 // Create a Checkout Session. Accepts optional `user_id` in the request body and stores it in session metadata
 app.post('/create-checkout-session', async (req, res) => {

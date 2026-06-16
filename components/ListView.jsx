@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, Trash2, Users, FileText } from "lucide-react";
 
 export default function ListView({ invoices, onNew, onOpen, onEdit, onDelete, myInfo, onUpdateInfo, isPro, onShowUpgrade, InfoModal, formatMoney }) {

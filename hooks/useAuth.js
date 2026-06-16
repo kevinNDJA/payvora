@@ -52,7 +52,7 @@ export default function useAuth() {
         } else if (listener && typeof listener.unsubscribe === "function") {
           listener.unsubscribe();
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     };

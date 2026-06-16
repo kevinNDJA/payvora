@@ -1,4 +1,3 @@
-import React from "react";
 import { X, Sparkles } from "lucide-react";
 import { FREE_LIMIT, APP_NAME } from "../constants";
 

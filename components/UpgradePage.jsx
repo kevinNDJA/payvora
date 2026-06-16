@@ -1,4 +1,3 @@
-import React from "react";
 import { APP_NAME, FREE_LIMIT } from "../constants";
 import { openSubscription } from "../utils/stripe";
 

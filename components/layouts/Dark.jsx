@@ -1,5 +1,3 @@
-import React from "react";
-import LineItemsTable from "../LineItemsTable";
 import Watermark from "../Watermark";
 
 export default function Dark({ invoice, myInfo, isPro, accent, total, formatMoney }) {

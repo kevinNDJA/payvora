@@ -23,7 +23,9 @@ export default function useMyInfo() {
           const info = await window.storage.get("myInfo");
           if (info) setMyInfo(JSON.parse(info.value));
         }
-      } catch (e) {}
+      } catch {
+        // keep defaults when persistence is unavailable
+      }
       setLoading(false);
     })();
   }, [user]);
@@ -36,7 +38,9 @@ export default function useMyInfo() {
       } else {
         await window.storage.set("myInfo", JSON.stringify(next));
       }
-    } catch (e) {}
+    } catch {
+      // settings persistence is best-effort
+    }
   };
 
   return { myInfo, setMyInfo, persistInfo, loading };

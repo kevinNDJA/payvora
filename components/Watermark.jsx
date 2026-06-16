@@ -1,4 +1,3 @@
-import React from "react";
 import { APP_NAME } from "../constants";
 
 export default function Watermark({ isPro, dark = false, mono = false }) {

@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function LineItemsTable({ invoice, total, accent, currency, headerClass = "", bodyClass = "", formatMoney }) {
   const fmt = formatMoney || ((n) => (n || 0).toLocaleString(undefined, { style: "currency", currency }));
   return (
